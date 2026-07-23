@@ -1,0 +1,77 @@
+name: Create GitHub Branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: "Repository Name"
+        required: true
+        default: "Kubernetes"
+
+      source_branch:
+        description: "Source Branch"
+        required: true
+        default: "main"
+
+      new_branch:
+        description: "New Branch"
+        required: true
+
+jobs:
+  create_branch:
+    runs-on: ubuntu-latest
+
+    env:
+      # <<< CHANGE THIS >>>
+      GITHUB_USERNAME: Raviaksh
+
+      # <<< CHANGE THIS >>>
+      GITHUB_TOKEN: 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
+
+
+    steps:
+      - name: Create GitHub Branch
+        shell: bash
+        run: |
+
+          REPO="${{ github.event.inputs.repository }}"
+          SOURCE_BRANCH="${{ github.event.inputs.source_branch }}"
+          NEW_BRANCH="${{ github.event.inputs.new_branch }}"
+
+          echo "Repository      : $REPO"
+          echo "Source Branch   : $SOURCE_BRANCH"
+          echo "New Branch      : $NEW_BRANCH"
+
+          # Get latest commit SHA of source branch
+          SHA=$(curl -s \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_USERNAME/$REPO/git/ref/heads/$SOURCE_BRANCH" \
+            | jq -r '.object.sha')
+
+          if [ "$SHA" = "null" ] || [ -z "$SHA" ]; then
+            echo "ERROR: Source branch '$SOURCE_BRANCH' not found."
+            exit 1
+          fi
+
+          echo "Source Branch SHA: $SHA"
+
+          # Create the new branch
+          HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_USERNAME/$REPO/git/refs" \
+            -d "{
+                  \"ref\":\"refs/heads/$NEW_BRANCH\",
+                  \"sha\":\"$SHA\"
+                }")
+
+          cat response.json
+
+          if [ "$HTTP_CODE" = "201" ]; then
+            echo "SUCCESS: Branch '$NEW_BRANCH' created successfully."
+          else
+            echo "FAILED: Branch creation failed."
+            exit 1
+          fi
