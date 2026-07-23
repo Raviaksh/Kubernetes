@@ -11,7 +11,7 @@ on:
       source_branch:
         description: "Source Branch"
         required: true
-        default: "main"
+        default: "master"
 
       new_branch:
         description: "New Branch"
